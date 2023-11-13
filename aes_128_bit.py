@@ -117,7 +117,6 @@ def check_to_pad(plainText):
     else:
         try:
             zero_count = int(plainText[-1], 16)
-            print("Added zeros should be:", zero_count)
         except ValueError:
             return False
         else:
@@ -127,17 +126,13 @@ def check_to_pad(plainText):
                     count += 1
                 else:
                     break
-            print("Actual zeros:", count)
             if count == zero_count:
                 return True
     return False
 
 def padding(msg):
     padding_length = (16 - (len(msg) % 16))
-    print("Padding...")
-    print("Padding length:", padding_length)
     msg += ("0" * (padding_length - 1)) + hex(padding_length - 1)[2:]
-    print("Padded plain text:", msg)
     return msg
 
 def removePadding(msg):
@@ -145,7 +140,6 @@ def removePadding(msg):
     try:
         padding_length = int(msg[-1], 16) + 1
     except ValueError:
-        print("No padding found")
         return msg
 
     # Count the number of padding characters
@@ -156,7 +150,6 @@ def removePadding(msg):
         else:
             break
     if count == (padding_length - 1):
-        print("Padding length:", padding_length)
         while padding_length > 0:
             msg = msg[:-1]
             padding_length -= 1
@@ -468,127 +461,64 @@ def generate_subkeys(KHexList):
         [],[],[],[],
     ]
 
-    print("\nS-Box to be used:")
-    print(tb.tabulate(sbox_table, tablefmt="grid"))
-
-    print("\nSubkeys 0-3:")
-    display_matrix(all_sub_keys_columns[:4], 4, "col")
     # Subkeys generation #
     # The round_number is used to identify the round constant to use
     round_number = 1
 
     # Range is from 3 to 43, step is 4, because we already have the first 4 subkeys
     # In every loop, 4 subkeys are generated, so we need to loop 10 times to generate 40 subkeys
-    print("\nGenerating remaining subkeys 4-43 in 10 rounds...\n")
-    print("Each round consists of 4 steps:")
-    print("1. Rotate column")
-    print("2. Substitute values from S-Box")
-    print("3. XOR with round constant to calculate g(col)")
-    print("4. XOR with previous column to obtain next subkeys")
 
     for i in range(3, 43, 4):
-
-        print_short_line()
-        print("Round number: " + str(round_number) + "/10")
-
         # First select the column to rotate
         colToRotate = all_sub_keys_columns[i]
-        print("\n1.")
-        print("Column to rotate:", colToRotate, "at index", i)
-
-        print("Rotating column...")
 
         # Then rotate it
         rotatedCol = colToRotate[1:] + colToRotate[:1]
-        print("Rotated column:", rotatedCol)
-
-        print("\n2.")
-        print("Substituting values from S-Box...")
 
         # Then substitute new values according to the sbox
         substitutionCol = []
         for j in range(4):
             substitutionCol.append(hex(aes_sbox[int(rotatedCol[j], 16)]))
-        print("Substituted column:", substitutionCol, "at index", i)
-
-        print("\n3.")
-        print(f"Calculating g(col{i})...")
 
         # Get the round constant
         rConCol = round_constants[round_number-1]
-        print("Round constant:", rConCol)
-
-        print(f"XORing substituted column with round constant to get g(col{i})...")
 
         # calculate g(col)
         gOfCol = []
         for j in range(4):
             gOfCol.append(hex(int(substitutionCol[j], 16) ^ rConCol[j]))
-        print(f"g(col{i}):", gOfCol, "at index", i)
-
-        print("\n4.")
-        print(f"Generating subkeys {i+1}, {i+2}, {i+3}...")
-
-        print(f"\nXORing g(col{i}) with col{i-3} to get subkey{i+1}...")
 
         # Get the 4 new subkeys
         nextCol = all_sub_keys_columns[i+1]
         for j in range(4):
             nextCol.append(hex(int(all_sub_keys_columns[i-3][j], 16) ^ int(gOfCol[j], 16)))
-        print(f"Subkey{i+1}:", nextCol, "at index", i+1)
 
         for j in range(3):
-            print(f"\nXORing subkey{i+j+1} with col{i-2+j} to get subkey{i+j+2}...")
             nextCol = all_sub_keys_columns[i+j+2]
             for k in range(4):
                 nextCol.append(hex(int(all_sub_keys_columns[i-2+j][k], 16) ^ int(all_sub_keys_columns[i+j+1][k], 16)))
-            print(f"Subkey{i+j+2}:", nextCol, "at index", i+j+2)
-
-        new_subkeys = all_sub_keys_columns[i+1:i+5]
-        print("\nSubkeys " + str(i+1) + "-" + str(i+4) + ":")
-        display_matrix(new_subkeys, 4, "col")
-
-        print("\nRound " + str(round_number) + " completed")
 
         round_number += 1
     
-    print_long_line()
-    print("Final Subkeys 0-43:")
-    display_matrix(all_sub_keys_columns, 11, "col")
     return all_sub_keys_columns
 
 
 def encrypt(plainText, key):
     ### Padding ###
-    print_long_line()
-    print("Starting encryption process...\n")
-    print("Step 1: Padding")
     if check_to_pad(plainText):
         plainText = padding(plainText)
-    else:
-        print("No padding needed")
 
-    print_long_line()
     # Convert plain text to hex
-    print("Step 2: Convert plain text to hex")
     PTHexList = string_to_hex(plainText)
-    print("Plain text in hex:", PTHexList)
 
-    print_long_line()
     # If the key is not 128-bit, convert it to a 128-bit key
-    print("Step 3: Convert key to a 128-bit key")
     KHexList = convert_to_128_bit(string_to_hex(key))
-    print("Key in hex:", KHexList)
 
     ### CIPHERING ###
     # phase 1
     # Generate subkeys
-    print_long_line()
-    print("Step 4: Generate 44 subkeys")
     all_sub_keys_columns = generate_subkeys(KHexList)
 
-    print_long_line()
-    print("Step 5: Split plain text into 16-byte blocks")
     # Create message message_blocks
     message_blocks = []
     for i in range(0, len(PTHexList), 16):
@@ -597,16 +527,13 @@ def encrypt(plainText, key):
     # Cipher blocks
     cipher_blocks = []
 
-    for z, message_block in enumerate(message_blocks):
+    for message_block in message_blocks:
         msg_matrix = [
             [message_block[0], message_block[1], message_block[2], message_block[3]],
             [message_block[4], message_block[5], message_block[6], message_block[7]],
             [message_block[8], message_block[9], message_block[10], message_block[11]],
             [message_block[12], message_block[13], message_block[14], message_block[15]],
         ]
-
-        print(f"\nMessage block {z}:", message_block)
-        display_matrix(msg_matrix, 4, "col")
 
         state_array = [
             [],
@@ -617,38 +544,16 @@ def encrypt(plainText, key):
 
         # phase 2
         # Add round key step using subkeys 0-3
-        print_long_line()
-        print(f"Step 6: XORing subkeys 0-3 with message block {z} to obtain the state matrix")
         for i in range(4):
             for j in range(4):
                 state_array[i].append(hex(int(msg_matrix[i][j], 16) ^ int(all_sub_keys_columns[i][j], 16)))
-        display_matrix(state_array, 4, "col")
-
-        print_long_line()
-        print(f"Step 7: Starting the 10 rounds for message block {z}")
-        print("\nEach round consists of 4 steps:")
-        print("1. Substitution from S-Box")
-        print("2. Rotate rows")
-        print("3. Mix columns except round 10")
-        print("4. Add round key")
-
-        print_short_line()
-        print("Standard matrix to be used:")
-        print(tb.tabulate(standard_matrix, tablefmt="grid"))
 
         # The 10 rounds
         for round in range(1, 11):
-            print_short_line()
-            print(f"Round number: {round}/10")
-            
             # Substitution from sbox
-            print("\n1.")
-            print("Substitution from S-Box into state matrix...")
             for i in range(4):
                 for j in range(4):
                     state_array[i][j] = hex(aes_sbox[int(state_array[i][j], 16)])
-            print("State matrix after substitution:")
-            display_matrix(state_array, 4, "col")
 
             # change from columns to rows
             state_array_rows = [
@@ -663,8 +568,6 @@ def encrypt(plainText, key):
                     state_array_rows[row].append(state_array[col][row])
 
             # rotate rows
-            print("\n2.")
-            print("Rotating rows...")
             for i in range(1, 4):
                 state_array_rows[i] = state_array_rows[i][i:] + state_array_rows[i][:i]
 
@@ -679,8 +582,6 @@ def encrypt(plainText, key):
             for col in range(4):
                 for row in range(4):
                     state_array[col].append(state_array_rows[row][col])
-            print("State matrix after row rotation:")
-            display_matrix(state_array, 4, "col")
 
             # mix columns step
             if round != 10:
@@ -693,9 +594,6 @@ def encrypt(plainText, key):
                 ]
 
                 # Matrix multiplication in GF(2^8)
-                print("\n3.")
-                print("Mixing columns...")
-                print("Multiplying state matrix with standard matrix...")
                 for i in range(4):
                     for j in range(4):
                         part1 = gf_2_8_product(int(standard_matrix[j][0], 16), int(state_array[i][0], 16))
@@ -706,49 +604,28 @@ def encrypt(plainText, key):
                         arr[i].append(hex(r))
 
                 state_array = arr
-                print("State matrix after mixing columns:")
-                display_matrix(state_array, 4, "col")
 
             # Add round key step using the next 4 subkeys
-            print("\n4.")
-            print("Adding round key...")
-            print(f"XORing state matrix with subkeys {round*4} to {round*4+3}...")
             for i in range(4):
                 for j in range(4):
                     sub_key_index = (round)*4 + j
                     state_array[i][j] = hex(int(state_array[i][j], 16) ^ int(all_sub_keys_columns[sub_key_index][j], 16))
-            print("State matrix after adding round key:")
-            display_matrix(state_array, 4, "col")
-
-            print("\nRound", round, "completed")
-            print("Obtained cipher block:")
-            display_matrix(state_array, 4, "col")
 
         cipher_blocks.append(state_array)
 
-    print_long_line()
-    print("Cipher blocks:")
     cipher = ""
     for cipher_block in cipher_blocks:
-        display_matrix(cipher_block, 4, "col")
         for i in range(4):
             for j in range(4):
                 cipher += cipher_block[i][j][2:].zfill(2)
     
     clipboard.copy(cipher)
-    print_long_line()
-    print("Ciphered text (Copied to clipboard):", cipher)
-    print_long_line()
-
     return cipher
 
 
 def decrypt(cipher, key):
     ### DECIPHERING ###
     # Do the reverse of the ciphering process
-    print_long_line()
-    print("Starting decryption process...\n")
-    print("Step 1: Generate 44 subkeys")
     if type(key) == str:
         all_sub_keys_columns = generate_subkeys(convert_to_128_bit(string_to_hex(key)))
     elif type(key) == list:
@@ -756,51 +633,22 @@ def decrypt(cipher, key):
         all_sub_keys_columns = generate_subkeys(key)
     
     # Retain the cipher blocks
-    print_long_line()
-    print("Step 2: Split cipher into 16-byte blocks:")
     cipher_blocks = []
     for i in range(0, len(cipher), 2):
         cipher_blocks.append(hex(int(cipher[i:i+2], 16)))
     cipher_blocks = [cipher_blocks[i:i+4] for i in range(0, len(cipher_blocks), 4)]
     cipher_blocks = [cipher_blocks[i:i+4] for i in range(0, len(cipher_blocks), 4)]
 
-    for cipher_block in cipher_blocks:
-        display_matrix(cipher_block, 4, "col")
-    
     deciphered_blocks = []
-
-    print_long_line()
-    print("Step 3: Starting the 10 rounds for each cipher block")
-    print("\nEach round consists of 4 steps:")
-    print("1. Add round key")
-    print("2. Mix columns except round 1")
-    print("3. Rotate rows")
-    print("4. Substitution from inverse S-Box")
-
-    print_short_line()
-    print("Inverse S-Box to be used:")
-    print(tb.tabulate(inverse_aes_sbox_table, tablefmt="grid"))
-    print_short_line()
-    print("Inverse standard matrix to be used:")
-    print(tb.tabulate(inverse_standard_matrix, tablefmt="grid"))
 
     for cipher_block in cipher_blocks:
         # 10 rounds
         for round in range(1, 11):
-            print_short_line()
-            print(f"Round number: {round}/10")
-
             # Add round key step starting from the last 4 subkeys 40-43
-            print("\n1.")
-            print(f"Adding round key {4*(11-round)} to {4*(11-round)+3}...")
-            print(f"XORing cipher block with subkeys {4*(11-round)} to {4*(11-round)+3}...")
             for i in range(4):
                 for j in range(4):
                     sub_key_index = (11-round)*4 + j
                     cipher_block[i][j] = hex(int(cipher_block[i][j], 16) ^ int(all_sub_keys_columns[sub_key_index][j], 16))
-
-            print("Cipher block after adding round key:")
-            display_matrix(cipher_block, 4, "col")
 
             # mix columns step
             if round != 1:
@@ -813,9 +661,6 @@ def decrypt(cipher, key):
                 ]
 
                 # Matrix multiplication in GF(2^8) with inverse standard matrix
-                print("\n2.")
-                print("Mixing columns...")
-                print("Multiplying cipher block with inverse standard matrix...")
                 for i in range(4):
                     for j in range(4):
                         part1 = gf_2_8_product(int(inverse_standard_matrix[j][0], 16), int(cipher_block[i][0], 16))
@@ -826,8 +671,6 @@ def decrypt(cipher, key):
                         arr[i].append(hex(r))
 
                 cipher_block = arr
-                print("Cipher block after mixing columns:")
-                display_matrix(cipher_block, 4, "col")
 
             # change from columns to rows
             cipher_block_rows = [
@@ -842,8 +685,6 @@ def decrypt(cipher, key):
                     cipher_block_rows[row].append(cipher_block[col][row])
             
             # rotate rows to the right instead of left
-            print("\n3.")
-            print("Rotating rows...")
             for i in range(1, 4):
                 cipher_block_rows[i] = cipher_block_rows[i][4-i:] + cipher_block_rows[i][:4-i]
             
@@ -859,227 +700,28 @@ def decrypt(cipher, key):
                 for row in range(4):
                     cipher_block[col].append(cipher_block_rows[row][col])
 
-            print("Cipher block after row rotation:")
-            display_matrix(cipher_block, 4, "col")
-
             # Substitution from inverse sbox
-            print("\n4.")
-            print("Substitution from inverse S-Box into cipher block...")
             for i in range(4):
                 for j in range(4):
                     cipher_block[i][j] = hex(inverse_aes_sbox[int(cipher_block[i][j], 16)])
-            print("Cipher block after substitution:")
-            display_matrix(cipher_block, 4, "col")
-
 
         # ADD round key step using subkeys 0-3
-        print_long_line()
-        print("Step 4: XORing subkeys 0-3 with cipher block to obtain the deciphered block")
         for i in range(4):
             for j in range(4):
                 cipher_block[i][j] = hex(int(cipher_block[i][j], 16) ^ int(all_sub_keys_columns[i][j], 16))
-        print("Deciphered block:")
-        display_matrix(cipher_block, 4, "col")
         deciphered_blocks.append(cipher_block)
 
-    print_long_line()
-    print("Deciphered blocks:")
     # Plain text back again
     deciphered_text = ""
     for deciphered_block in deciphered_blocks:
-        display_matrix(deciphered_block, 4, "col")
         for i in range(4):
             for j in range(4):
                 deciphered_text += chr(int(deciphered_block[i][j], 16))
 
-    print("\nDeciphered text with padding:", repr(deciphered_text))
-    print("Removing padding...")
     deciphered_text = removePadding(deciphered_text)
-    print_long_line()
-    print("Deciphered text:", repr(deciphered_text))
-    print_long_line()
     return deciphered_text
 
 
-def removePadding_noprint(msg):
-    # Need to check if padding has been done
-    try:
-        padding_length = int(msg[-1], 16) + 1
-    except ValueError:
-        return msg
-
-    # Count the number of padding characters
-    count = 0
-    for char in range(padding_length - 1):
-        if msg[-(char+2)] == "0":
-            count += 1
-        else:
-            break
-    if count == (padding_length - 1):
-        while padding_length > 0:
-            msg = msg[:-1]
-            padding_length -= 1
-    return msg
-
-
-def generate_subkeys_noprint(KHexList):
-    # put 44 empty lists inside subkeys44, each 4 lists is one subkey, each list is one column
-    all_sub_keys_columns = [
-        [KHexList[0], KHexList[1], KHexList[2], KHexList[3]],
-        [KHexList[4], KHexList[5], KHexList[6], KHexList[7]],
-        [KHexList[8], KHexList[9], KHexList[10], KHexList[11]],
-        [KHexList[12], KHexList[13], KHexList[14], KHexList[15]],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-        [],[],[],[],
-    ]
-
-    # Subkeys generation #
-    # The round_number is used to identify the round constant to use
-    round_number = 1
-
-    # Range is from 3 to 43, step is 4, because we already have the first 4 subkeys
-    # In every loop, 4 subkeys are generated, so we need to loop 10 times to generate 40 subkeys
-    for i in range(3, 43, 4):
-        # First select the column to rotate
-        colToRotate = all_sub_keys_columns[i]
-
-        # Then rotate it
-        rotatedCol = colToRotate[1:] + colToRotate[:1]
-
-        # Then substitute new values according to the sbox
-        substitutionCol = []
-        for j in range(4):
-            substitutionCol.append(hex(aes_sbox[int(rotatedCol[j], 16)]))
-
-        # Get the round constant
-        rConCol = round_constants[round_number-1]
-
-        # calculate g(col)
-        gOfCol = []
-        for j in range(4):
-            gOfCol.append(hex(int(substitutionCol[j], 16) ^ rConCol[j]))
-
-        # Get the 4 new subkeys
-        nextCol = all_sub_keys_columns[i+1]
-        for j in range(4):
-            nextCol.append(hex(int(all_sub_keys_columns[i-3][j], 16) ^ int(gOfCol[j], 16)))
-
-        for j in range(3):
-            nextCol = all_sub_keys_columns[i+j+2]
-            for k in range(4):
-                nextCol.append(hex(int(all_sub_keys_columns[i-2+j][k], 16) ^ int(all_sub_keys_columns[i+j+1][k], 16)))
-
-        round_number += 1
-
-    return all_sub_keys_columns
-
-
-def decrypt_noprint(cipher, key):
-    ### DECIPHERING ###
-    # Do the reverse of the ciphering process
-    if type(key) == str:
-        all_sub_keys_columns = generate_subkeys_noprint(convert_to_128_bit(string_to_hex(key)))
-    elif type(key) == list:
-        # If brute-force is used, the key is already a list of hexs
-        all_sub_keys_columns = generate_subkeys_noprint(key)
-    
-    # Retain the cipher blocks
-    cipher_blocks = []
-    for i in range(0, len(cipher), 2):
-        cipher_blocks.append(hex(int(cipher[i:i+2], 16)))
-    cipher_blocks = [cipher_blocks[i:i+4] for i in range(0, len(cipher_blocks), 4)]
-    cipher_blocks = [cipher_blocks[i:i+4] for i in range(0, len(cipher_blocks), 4)]
-
-    deciphered_blocks = []
-
-    for cipher_block in cipher_blocks:
-        # 10 rounds
-        for round in range(1, 11):
-            # Add round key step starting from the last 4 subkeys 40-43
-            for i in range(4):
-                for j in range(4):
-                    sub_key_index = (11-round)*4 + j
-                    cipher_block[i][j] = hex(int(cipher_block[i][j], 16) ^ int(all_sub_keys_columns[sub_key_index][j], 16))
-
-            # mix columns step
-            if round != 1:
-                # Each list is a column
-                arr = [
-                    [],
-                    [],
-                    [],
-                    []
-                ]
-
-                # Matrix multiplication in GF(2^8) with inverse standard matrix
-                for i in range(4):
-                    for j in range(4):
-                        part1 = gf_2_8_product(int(inverse_standard_matrix[j][0], 16), int(cipher_block[i][0], 16))
-                        part2 = gf_2_8_product(int(inverse_standard_matrix[j][1], 16), int(cipher_block[i][1], 16))
-                        part3 = gf_2_8_product(int(inverse_standard_matrix[j][2], 16), int(cipher_block[i][2], 16))
-                        part4 = gf_2_8_product(int(inverse_standard_matrix[j][3], 16), int(cipher_block[i][3], 16))
-                        r = part1 ^ part2 ^ part3 ^ part4
-                        arr[i].append(hex(r))
-
-                cipher_block = arr
-
-            # change from columns to rows
-            cipher_block_rows = [
-                [],
-                [],
-                [],
-                []
-            ]
-
-            for col in range(4):
-                for row in range(4):
-                    cipher_block_rows[row].append(cipher_block[col][row])
-            
-            # rotate rows to the right instead of left
-            for i in range(1, 4):
-                cipher_block_rows[i] = cipher_block_rows[i][4-i:] + cipher_block_rows[i][:4-i]
-            
-            # change from rows to columns back again
-            cipher_block = [
-                [],
-                [],
-                [],
-                []
-            ]
-
-            for col in range(4):
-                for row in range(4):
-                    cipher_block[col].append(cipher_block_rows[row][col])
-
-            # Substitution from inverse sbox
-            for i in range(4):
-                for j in range(4):
-                    cipher_block[i][j] = hex(inverse_aes_sbox[int(cipher_block[i][j], 16)])
-
-
-        # ADD round key step using subkeys 0-3
-        for i in range(4):
-            for j in range(4):
-                cipher_block[i][j] = hex(int(cipher_block[i][j], 16) ^ int(all_sub_keys_columns[i][j], 16))
-        deciphered_blocks.append(cipher_block)
-
-    # Plain text back again
-    deciphered_text = ""
-    for deciphered_block in deciphered_blocks:
-        for i in range(4):
-            for j in range(4):
-                deciphered_text += chr(int(deciphered_block[i][j], 16))
-
-    deciphered_text = removePadding_noprint(deciphered_text)
-    return deciphered_text
 
 def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
     # Check if the cipher has been brute-forced before and get the last key used
