@@ -1,9 +1,9 @@
 import socket
-from aes_128_bit import encrypt
+from aes_128_bit import encrypt, decrypt
 
-KEY = "a"
-MSG = "Hello World!"
-CIPHER = encrypt(MSG, KEY)
+KEY_EXCHANGE = "a"
+KEY = "b"
+ENCRYPTED_KEY = encrypt(KEY_EXCHANGE, KEY)
 
 HEADERSIZE = 10
 
@@ -14,7 +14,7 @@ s.listen(5)
 while True:
     clientsocket, address = s.accept()
     print(f"Connection from {address} has been established!")
-    msg = CIPHER
+    msg = ENCRYPTED_KEY
     msg = f"{len(msg):<{HEADERSIZE}}" + msg
     clientsocket.send(bytes(msg, "utf-8"))
 
@@ -28,10 +28,11 @@ while True:
             new_msg = False
         full_msg += msg.decode("utf-8")
         if len(full_msg) - HEADERSIZE == msglen:
-            print("Reply: " + full_msg[HEADERSIZE:])
+            print("Encrypted message: " + full_msg[HEADERSIZE:])
+            print("Decrypted message: " + decrypt(full_msg[HEADERSIZE:], KEY))
 
             new_msg = True 
             full_msg = ""
 
-            break
-    break
+            # break
+    # break
