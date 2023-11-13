@@ -1,0 +1,28 @@
+{
+    "brokenCiphers": [
+        {
+            "cipher": "4e3b2bbcb89dfebf5b5c2a41b9704db5",
+            "key": "a",
+            "hexKey": [
+                "0x61",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0"
+            ],
+            "plainText": "se7laby"
+        }
+    ],
+    "candidateCiphers": []
+}
