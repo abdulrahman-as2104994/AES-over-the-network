@@ -1,9 +1,3 @@
-import json
-import math
-import time
-import clipboard
-import tabulate as tb
-
 aes_sbox = [
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -23,12 +17,6 @@ aes_sbox = [
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16,
 ]
 
-sbox_table = []
-for i in range(16):
-    sbox_table.append([])
-    for j in range(16):
-        sbox_table[i].append(hex(aes_sbox[i*16+j]))
-
 inverse_aes_sbox = [
     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
     0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87, 0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
@@ -47,12 +35,6 @@ inverse_aes_sbox = [
     0xA0, 0xE0, 0x3B, 0x4D, 0xAE, 0x2A, 0xF5, 0xB0, 0xC8, 0xEB, 0xBB, 0x3C, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26, 0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D,
 ]
-
-inverse_aes_sbox_table = []
-for i in range(16):
-    inverse_aes_sbox_table.append([])
-    for j in range(16):
-        inverse_aes_sbox_table[i].append(hex(inverse_aes_sbox[i*16+j]))
 
 # Each list is a column, 10 columns for 10 rounds
 round_constants = [
@@ -83,15 +65,6 @@ inverse_standard_matrix = [
     ['0x0D', '0x09', '0x0E', '0x0B'],
     ['0x0B', '0x0D', '0x09', '0x0E']
 ]
-
-def print_short_line():
-    print("-----------------------------------------------------")
-
-def print_long_line():
-    print("-------------------------------------------------------------------------------------------------------------")
-
-def print_main_header():
-    print("\n------------------------------------128-bit AES Encryption and Decryption------------------------------------")
 
 def byte(x, n=8):
         return format(x, f"0{n}b")
@@ -187,261 +160,6 @@ def string_to_hex(input_string):
         hex_result.append(hex_char)
     return hex_result
 
-def show_broken_ciphers():
-    brokenCiphers = read_json("broken.json")["brokenCiphers"]
-    if len(brokenCiphers) == 0:
-        print("\nNo broken ciphers found")
-        return
-    else:
-        print("\nFound", len(brokenCiphers), "broken ciphers:\n")
-    for borkenCipher in brokenCiphers:
-        print_short_line()
-        print("Cipher:", borkenCipher["cipher"])
-        print("Key in ASCII:", borkenCipher["key"])
-        print("Deciphered text:", borkenCipher["plainText"])
-
-def show_candidate_plain_texts():
-    candidateCiphers = read_json("broken.json")["candidateCiphers"]
-    if len(candidateCiphers) == 0:
-        print("\nNo candidate plain texts found")
-        return
-    else:
-        print("\nFound", len(candidateCiphers), "candidate plain texts:\n")
-    for candidateCipher in candidateCiphers:
-        print_short_line()
-        print("Cipher:", candidateCipher["cipher"])
-        print("Key in ASCII:", candidateCipher["key"])
-        print("Deciphered text:", candidateCipher["plainText"])
-
-
-def show_used_keys_history():
-    ciphers = read_json("lastTriedBinary.json")["ciphers"]
-    if len(ciphers) == 0:
-        print("\nNo used keys history found")
-        return
-    else:
-        print("\nFound", len(ciphers), "used keys history:\n")
-    for cipher in ciphers:
-        print_short_line()
-        print("Cipher:", cipher["cipher"])
-        print("Binary:", cipher["binary"])
-        print_short_line()
-
-def save_last_used_binary(cipher, binary):
-    with open("lastTriedBinary.json", "r") as f:
-        data = json.load(f)
-        f.close()
-    found = False
-    for c in data["ciphers"]:
-        if c["cipher"] == cipher:
-            c["binary"] = binary
-            found = True
-            break
-    if not found:
-        data["ciphers"].append({"cipher": cipher, "binary": binary})
-
-    with open("lastTriedBinary.json", "w") as f:
-        json.dump(data, f, indent=4)
-        f.seek(0)
-        f.close()
-    
-    print("Saved last used binary for cipher successfully")
-
-def find_binary(cipher):
-    with open("lastTriedBinary.json", "r") as f:
-        data = json.load(f)
-        f.close()
-    for c in data["ciphers"]:
-        if c["cipher"] == cipher:
-            return c["binary"]
-    return -1
-
-def clear_broken_ciphers():
-    with open("broken.json", "r") as f:
-        data = json.load(f)
-        f.close()
-    count = len(data["brokenCiphers"])
-    data["brokenCiphers"] = []
-
-    with open("broken.json", "w") as f:
-        json.dump(data, f, indent=4)
-        f.seek(0)
-        f.close()
-    
-    print("\nCleared", count, "broken ciphers")
-
-def clear_candidate_plain_texts():
-    with open("broken.json", "r") as f:
-        data = json.load(f)
-        f.close()
-    
-    count = len(data["candidateCiphers"])
-    data["candidateCiphers"] = []
-
-    with open("broken.json", "w") as f:
-        json.dump(data, f, indent=4)
-        f.seek(0)
-        f.close()
-    
-    print("\nCleared", count, "candidate plain texts")
-
-def clear_used_keys_history():
-    with open("lastTriedBinary.json", "r") as f:
-        data = json.load(f)
-        f.close()
-    
-    count = len(data["ciphers"])
-    data["ciphers"] = []
-
-    with open("lastTriedBinary.json", "w") as f:
-        json.dump(data, f, indent=4)
-        f.seek(0)
-        f.close()
-    
-    print("\nCleared", count, "used keys history")
-
-def clear_all_data():
-    clear_broken_ciphers()
-    clear_candidate_plain_texts()
-    clear_used_keys_history()
-
-def override_json(new_data, category, filename='broken.json'):
-    with open(filename, 'r') as f:
-        data = json.load(f)
-        f.close()
-    data[category] = new_data
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=4)
-        f.seek(0)
-        f.close()
-
-def write_json(new_data, category, filename='broken.json'):
-    with open(filename,'r+') as file:
-        file_data = json.load(file)
-        file_data[category].append(new_data)
-        file.seek(0)
-        json.dump(file_data, file, indent = 4)
-     
-def read_json(filename):
-    with open(filename, 'r') as file:
-        data = json.load(file)
-        return data
-
-def find_broken_cipher(cipher):
-    brokenCiphers = read_json("broken.json")["brokenCiphers"]
-    for brokenCipher in brokenCiphers:
-        if brokenCipher["cipher"] == cipher:
-            return brokenCipher
-    return False
-
-def get_matching_ciphers(cipher):
-    candidateCiphers = read_json("broken.json")["candidateCiphers"]
-    matching_ciphers = []
-    for candidateCipher in candidateCiphers:
-        if candidateCipher["cipher"] == cipher:
-            matching_ciphers.append(candidateCipher)
-    return matching_ciphers
-
-def remove_candidate_ciphers(matchingCiphers):
-    data = read_json("broken.json")
-    candidateCiphers = data["candidateCiphers"]
-    for matchingCipher in matchingCiphers:
-        candidateCiphers.remove(matchingCipher)
-    override_json(candidateCiphers, "candidateCiphers")
-
-def remove_key_history(cipher):
-    data = read_json("lastTriedBinary.json")
-    ciphers = data["ciphers"]
-    for c in ciphers:
-        if c["cipher"] == cipher:
-            ciphers.remove(c)
-            break
-    data["ciphers"] = ciphers
-    with open("lastTriedBinary.json", "w") as f:
-        json.dump(data, f, indent=4)
-        f.seek(0)
-        f.close()
-
-
-def move_to_broken(cipher, binary, matchingCiphers):
-    bad_input = True
-    while bad_input:
-        print("Leave it blank to exit")
-        plainText = input("Enter the found plain text to move it to broken ciphers list: ")
-        if plainText == "":
-            print("\nExiting brute-force mode...")
-            save_last_used_binary(cipher, binary)
-            return False
-    
-        # Move the cipher from candidateCiphers to brokenCiphers
-        for matchingCipher in matchingCiphers:
-            if matchingCipher["plainText"] == plainText:
-                write_json(matchingCipher, "brokenCiphers")
-                bad_input = False
-                print("Saved to broken ciphers list successfully!")
-        if bad_input:
-            print("Invalid plain text!")
-    return True
-
-def hexkey_to_binarykey(hexKey):
-    return int("".join([bin(int(hexKey[i], 16))[2:].zfill(8) for i in range(len(hexKey)-1, -1, -1)]), 2)
-
-def binarykey_to_hexkey(binary_key):
-    binary_key = bin(binary_key)[2:].zfill(128)
-    hexKey = [hex(int(binary_key[i-8:i], 2)) for i in range(129, 8, -8)]
-    return hexKey
-
-def get_last_candidate_key(matchingCiphers):
-    hexKey = matchingCiphers[-1]["hexKey"]
-    print("Last found candidate key:", hexKey)
-    binary = hexkey_to_binarykey(hexKey)
-    return binary
-
-def get_all_candidate_ciphers():
-    return read_json("broken.json")["candidateCiphers"]
-
-def hexkey_to_char(hexKey):
-    return "".join([chr(int(value, 16)) for value in hexKey]).replace("\u0000","")
-
-def display_matrix(matrix, num_cols, col_title):
-    all_matrix = []
-    
-    row_count = len(matrix[0])
-    matrix_rows = []
-    for i in range(row_count):
-        matrix_rows.append([])
-
-    count = math.ceil(len(matrix) / num_cols)
-
-    while count > 0:
-        # Convert columns to rows
-        for col in range(num_cols if count > 1 else len(matrix)):
-            for row in range(row_count):
-                matrix_rows[row].append(matrix[col][row])
-        
-        all_matrix.append(matrix_rows)
-
-        # Remove the first num_cols columns
-        matrix = matrix[num_cols:]
-        
-        # reset matrix_rows
-        matrix_rows = []
-        for i in range(row_count):
-            matrix_rows.append([])
-
-        count -= 1
-
-    count = 0
-    for m in all_matrix:
-        headers = []
-        for i in range(len(m[0])):
-            headers.append(col_title + str(count + i))
-            
-        count += len(m[0])
-        
-        print(tb.tabulate(m, headers=headers, tablefmt="fancy_grid"))
-
-
 def generate_subkeys(KHexList):
     # put 44 empty lists inside subkeys44, each 4 lists is one subkey, each list is one column
     all_sub_keys_columns = [
@@ -504,6 +222,8 @@ def generate_subkeys(KHexList):
 
 
 def encrypt(plainText, key):
+    if key == None:
+        return plainText
     ### Padding ###
     if check_to_pad(plainText):
         plainText = padding(plainText)
@@ -619,11 +339,12 @@ def encrypt(plainText, key):
             for j in range(4):
                 cipher += cipher_block[i][j][2:].zfill(2)
     
-    clipboard.copy(cipher)
     return cipher
 
 
 def decrypt(cipher, key):
+    if key == None:
+        return cipher
     ### DECIPHERING ###
     # Do the reverse of the ciphering process
     if type(key) == str:
@@ -720,167 +441,3 @@ def decrypt(cipher, key):
 
     deciphered_text = removePadding(deciphered_text)
     return deciphered_text
-
-
-
-def brute_force(cipher, plain_text="", ignoreJSON=False, b=0):
-    # Check if the cipher has been brute-forced before and get the last key used
-    binary = find_binary(cipher)
-    if binary == -1:
-        # If the cipher has not been brute-forced before, start from the beginning or from the last key stopped at
-        binary = b
-
-    # Check if the cipher has already been broken
-    brokenCipher = find_broken_cipher(cipher)
-    if brokenCipher:
-        print()
-        print_long_line()
-        print("Cipher already broken")
-        print("Key in hex:", brokenCipher["hexKey"])
-        print("Key in ASCII:", brokenCipher["key"])
-        print("Deciphered text:", brokenCipher["plainText"])
-        print_long_line()
-        return
-    
-    # Check if the cipher has already been tried before and has candidate plain texts
-    if not ignoreJSON:
-        matchingCiphers = get_matching_ciphers(cipher)
-    
-        if len(matchingCiphers) > 0:
-            # Display the candidate plain texts
-            print("\nFound", len(matchingCiphers), "candidate deciphered texts:\m")
-            for matchingCipher in matchingCiphers:
-                print_short_line()
-                print("Key in hex:", matchingCipher["hexKey"])
-                print("Key in ASCII:", matchingCipher["key"])
-                print("Deciphered text:", matchingCipher["plainText"])
-                print_short_line()
-
-            found = input("Is the plain text you are looking for in the above list? (y/n): ")
-            if found.strip().lower() == "y":
-                # Try to move the cipher from candidate to broken
-                if move_to_broken(cipher, binary, matchingCiphers):
-                    # Remove the ciphers from candidateCiphers
-                    remove_candidate_ciphers(matchingCiphers)
-                    # Remove the cipher from lastTriedBinary
-                    remove_key_history(cipher)
-                return
-            elif found == "n":
-                print("Continuing the brute-force after last tried key for this cipher...")
-                binary = find_binary(cipher)
-                if binary == -1:
-                    print("No last tried key found for this cipher")
-                    print("Continuing the brute-force after last tried candidate plain text key ...")
-                    binary = get_last_candidate_key(matchingCiphers)
-            else:
-                print("Invalid choice!")
-                save_last_used_binary(cipher, binary)
-                return
-        
-    time.sleep(3)
-
-    matchingCiphers = []
-
-    for i in range(binary, 2**128):
-        try:
-            hexKey = binarykey_to_hexkey(binary)
-            print_long_line()
-            print("Iteration:", binary)
-            print("Trying hex key:", hexKey)
-            deciphered_text = decrypt_noprint(cipher, hexKey)
-
-            if plain_text != "":
-                if deciphered_text == plain_text:
-
-                    # Convert the key to ASCII
-                    key = hexkey_to_char(hexKey)
-
-                    # Save to broken ciphers
-                    write_json({"cipher": cipher, "key": key, "hexKey": hexKey, "plainText": deciphered_text}, "brokenCiphers")
-
-                    # Remove the ciphers from candidateCiphers
-                    matchingCiphers = get_matching_ciphers(cipher)
-                    remove_candidate_ciphers(matchingCiphers)
-
-                    # Remove the cipher from lastTriedBinary
-                    remove_key_history(cipher)
-
-                    
-                    print("\n****************************************Cipher broken successfully!****************************************")
-                    print("Key found:", hexKey)
-                    print("Key in ASCII:", key)
-                    print("Iterations:", binary)
-                    print("Deciphered text:", deciphered_text)
-                    print("Plain text:", plain_text)
-                    print("*************************************************************************************************************")
-                    print("\nCipher saved to broken ciphers list successfully")
-
-                    return
-                    
-            elif bytes(deciphered_text, "utf-8").isascii():
-                key = hexkey_to_char(hexKey)
-
-                # Save to candidate ciphers
-                write_json({"cipher": cipher, "key": key, "hexKey": hexKey, "plainText": deciphered_text}, "candidateCiphers")
-
-                print("\n****************************************Cipher broken successfully!****************************************")
-                print("Key found:", hexKey)
-                print("Key in ASCII:", key)
-                print("Iterations:", binary)
-                print("Deciphered text:", deciphered_text)
-                print("Plain text:", plain_text)
-                print("*************************************************************************************************************")    
-
-                print("\nPlain text saved to candidate plain texts list successfully")
-
-                time.sleep(5)   
-
-            binary += 1
-
-        except KeyboardInterrupt:
-            print("\nStopping the brute-force...\n")
-
-            # Show candidate ciphers
-            print("Showing candidate ciphers:")
-            matchingCiphers = get_matching_ciphers(cipher)
-            print("\nFound", len(matchingCiphers), "candidate deciphered texts")
-
-            if len(matchingCiphers) > 0:
-                for matchingCipher in matchingCiphers:
-                    print_short_line()
-                    print("Key in hex:", matchingCipher["hexKey"])
-                    print("Key in ASCII:", matchingCipher["key"])
-                    print("Deciphered text:", matchingCipher["plainText"])
-                    print_short_line()
-                
-                found = input("\nIs the plain text you are looking for in the above list? (y/n): ")
-                if found.strip().lower() == "y":
-                    # Try to move the cipher from candidate to broken
-                    if move_to_broken(cipher, binary, matchingCiphers):
-                        # Remove the ciphers from candidateCiphers
-                        remove_candidate_ciphers(matchingCiphers)
-                        # Remove the cipher from lastTriedBinary
-                        remove_key_history(cipher)
-                    return
-                elif found == "n":
-                    cont = input("Do you wish to continue the brute-force? (y/n): ")
-                    if cont.strip().lower() == "y":
-                        print("Continuing the brute-force after last used key ...")
-                    else:
-                        save_last_used_binary(cipher, binary)
-                        return
-                else:
-                    print("Invalid choice!")
-                    save_last_used_binary(cipher, binary)
-                    return
-            
-            elif len(matchingCiphers) == 0:
-                cont = input("Do you wish to continue the brute-force? (y/n): ")
-                if cont.strip().lower() == "y":
-                    print("Continuing the brute-force after last used key ...")
-                else:
-                    save_last_used_binary(cipher, binary)
-                    return
-                
-
-

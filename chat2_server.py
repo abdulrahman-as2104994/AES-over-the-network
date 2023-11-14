@@ -1,12 +1,10 @@
 import threading
 import socket
 import select
-from aes_128_bit import encrypt, decrypt
 
 HEADER_LENGTH = 10
 HOST_IP = '127.0.0.1' # Localhost
 PORT = 12345
-KEY = "a"
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((HOST_IP, PORT))
