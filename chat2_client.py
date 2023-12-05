@@ -7,8 +7,8 @@ from aes_128_bit import encrypt, decrypt
 HEADER_LENGTH = 10
 HOST_IP = "127.0.0.1"
 PORT = 12345
-KEY = "abcdefg"
- 
+KEY = "1234567890123456"
+
 # Choose a username
 my_username = input("Choose your username: ")
 username = my_username.encode('utf-8')
